@@ -216,10 +216,10 @@ public class AreaSprite extends EntrySprite
         protected TudeyContext _ctx;
 
         /** The models representing the vertices. */
-        protected Model[] _vertices = new Model[0];
+        protected Model[] _vertices = Model.EMPTY_ARRAY;
 
         /** The models representing the edges. */
-        protected Model[] _edges = new Model[0];
+        protected Model[] _edges = Model.EMPTY_ARRAY;
 
         /** Displays the actual area. */
         protected AreaElement _area;
@@ -344,11 +344,12 @@ public class AreaSprite extends EntrySprite
      */
     protected void updateFromConfig ()
     {
-        AreaConfig.Original original = (_config == null) ?
-            null : _config.getOriginal(_ctx.getConfigManager());
-        original = (original == null) ? AreaConfig.NULL_ORIGINAL : original;
-        Implementation nimpl = original.getSpriteImplementation(_ctx, this, _impl);
-        nimpl = (nimpl == null) ? NULL_IMPLEMENTATION : nimpl;
+        Implementation nimpl = (_config == null)
+                ? AreaConfig.NULL_ORIGINAL.getSpriteImplementation(_ctx, this, _impl)
+                : _config.getSpriteImplementation(_ctx, this, _impl);
+        if (nimpl == null) {
+            nimpl = NULL_IMPLEMENTATION;
+        }
         if (_impl != nimpl) {
             _impl.dispose();
             _impl = nimpl;

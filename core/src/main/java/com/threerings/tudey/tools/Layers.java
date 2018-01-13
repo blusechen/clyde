@@ -76,7 +76,7 @@ public class Layers extends EditorTool
     {
         super(editor);
         ((GroupLayout) getLayout()).setGap(0);
-        _tableModel = new LayerTableModel(editor);
+        _tableModel = new LayerTableModel(editor, this);
         _table = _tableModel.getTable();
         _table.setPreferredScrollableViewportSize(new Dimension(100, 64));
         _table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -278,11 +278,9 @@ public class Layers extends EditorTool
             if (_scene.isLayerEmpty(layer) ||
                     confirm("Layer is not empty!", "This layer has stuff on it.\n" +
                         "Continue anyway and move the stuff to the base layer?")) {
-                // if it's currently selected, select the layer below it (we can never remove 0)
-                if (getSelectedLayer() == layer) {
-                    setSelectedLayer(layer - 1);
-                }
                 _tableModel.removeLayer(layer);
+                // always select the one below it
+                setSelectedLayer(layer - 1);
             }
         }
         { // initializer
@@ -310,9 +308,10 @@ public class Layers extends EditorTool
 class LayerTableModel extends AbstractTableModel
     implements TudeySceneModel.LayerObserver
 {
-    public LayerTableModel (SceneEditor editor)
+    public LayerTableModel (SceneEditor editor, Layers layers)
     {
         _editor = editor;
+        _layers = layers;
     }
 
     public JTable getTable ()
@@ -426,6 +425,7 @@ class LayerTableModel extends AbstractTableModel
         switch (column) {
         default:
             _scene.renameLayer(row, String.valueOf(value));
+            _layers.fireStateChanged();
             break;
 
         case 2:
@@ -507,6 +507,8 @@ class LayerTableModel extends AbstractTableModel
     }
 
     protected SceneEditor _editor;
+
+    protected Layers _layers;
 
     protected List<Boolean> _vis;
 

@@ -539,6 +539,16 @@ public abstract class BaseParticleSystem extends Model.Implementation
     }
 
     @Override
+    protected void setHalted ()
+    {
+        super.setHalted();
+        if (!_warmed) {
+            warmUp();
+        }
+        _completed = true;
+    }
+
+    @Override
     public void tick (float elapsed)
     {
         // if we're completed, there's nothing more to do
@@ -555,15 +565,7 @@ public abstract class BaseParticleSystem extends Model.Implementation
 
         // the first non-zero elapsed interval triggers the warmup
         if (!_warmed && elapsed > 0f) {
-            float remaining = _config.warmupTime;
-            while (remaining > 0f) {
-                float welapsed = Math.min(remaining, _config.warmupGranularity);
-                for (Layer layer : _layers) {
-                    layer.tick(welapsed);
-                }
-                remaining -= welapsed;
-            }
-            _warmed = true;
+            warmUp();
         }
 
         // reset the bounds
@@ -670,6 +672,21 @@ public abstract class BaseParticleSystem extends Model.Implementation
      * Creates a new layer for the supplied config.
      */
     protected abstract Layer createLayer (BaseParticleSystemConfig.Layer config);
+
+    /**
+     * Warm-up our layers.
+     */
+    protected void warmUp ()
+    {
+        for (float remaining = _config.warmupTime; remaining > 0f; ) {
+            float welapsed = Math.min(remaining, _config.warmupGranularity);
+            for (Layer layer : _layers) {
+                layer.tick(welapsed);
+            }
+            remaining -= welapsed;
+        }
+        _warmed = true;
+    }
 
     /**
      * Resets the bounds before the tick.

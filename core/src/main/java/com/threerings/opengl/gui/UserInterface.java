@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
@@ -339,6 +339,7 @@ public class UserInterface extends Container
     public UserInterface (GlContext ctx, String name)
     {
         this(ctx, ctx.getConfigManager().getConfig(UserInterfaceConfig.class, name));
+        noteMissingConfig(name);
     }
 
     /**
@@ -349,6 +350,7 @@ public class UserInterface extends Container
     {
         this(ctx, ctx.getConfigManager().getConfig(
             UserInterfaceConfig.class, name, firstKey, firstValue, otherArgs));
+        noteMissingConfig(name);
     }
 
     /**
@@ -357,6 +359,9 @@ public class UserInterface extends Container
     public UserInterface (GlContext ctx, ConfigReference<UserInterfaceConfig> ref)
     {
         this(ctx, ctx.getConfigManager().getConfig(UserInterfaceConfig.class, ref));
+        if (ref != null) {
+            noteMissingConfig(ref.getName());
+        }
     }
 
     /**
@@ -398,6 +403,7 @@ public class UserInterface extends Container
     public void setConfig (String name)
     {
         setConfig(_ctx.getConfigManager().getConfig(UserInterfaceConfig.class, name));
+        noteMissingConfig(name);
     }
 
     /**
@@ -406,6 +412,9 @@ public class UserInterface extends Container
     public void setConfig (ConfigReference<UserInterfaceConfig> ref)
     {
         setConfig(_ctx.getConfigManager().getConfig(UserInterfaceConfig.class, ref));
+        if (ref != null) {
+            noteMissingConfig(ref.getName());
+        }
     }
 
     /**
@@ -416,6 +425,7 @@ public class UserInterface extends Container
     {
         setConfig(_ctx.getConfigManager().getConfig(
             UserInterfaceConfig.class, name, firstKey, firstValue, otherArgs));
+        noteMissingConfig(name);
     }
 
     /**
@@ -786,10 +796,21 @@ public class UserInterface extends Container
     }
 
     @Override
-    public Objects.ToStringHelper toStringHelper ()
+    public MoreObjects.ToStringHelper toStringHelper ()
     {
         return super.toStringHelper()
             .add("config", (_config == null) ? null : _config.getName());
+    }
+
+    /**
+     * Log a <em>fucking error</em> if we don't have any UI config after
+     * supposedly being constructed with one.
+     */
+    protected void noteMissingConfig (String name)
+    {
+        if (_config == null && name != null) {
+            log.warning("Unable to find UI!", "name", name);
+        }
     }
 
     @Override

@@ -25,6 +25,7 @@
 
 package com.threerings.opengl;
 
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.image.BufferedImage;
 
@@ -33,7 +34,7 @@ import java.nio.ByteBuffer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Controllers;
-import org.lwjgl.input.IME;
+//import org.lwjgl.input.IME;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
@@ -78,6 +79,7 @@ public abstract class GlDisplayApp extends GlApp
     {
         try {
             Display.setDisplayModeAndFullscreen(mode);
+            updateRendererSize();
         } catch (LWJGLException e) {
             log.warning("Failed to set display mode/fullscreen.", "mode", mode, e);
         }
@@ -93,9 +95,7 @@ public abstract class GlDisplayApp extends GlApp
         }
         try {
             Display.setDisplayMode(mode);
-            if (Display.isCreated()) {
-                _renderer.setSize(mode.getWidth(), mode.getHeight());
-            }
+            updateRendererSize();
         } catch (LWJGLException e) {
             log.warning("Failed to set display mode.", "mode", mode, e);
         }
@@ -181,7 +181,7 @@ public abstract class GlDisplayApp extends GlApp
         Keyboard.destroy();
         Mouse.destroy();
         Controllers.destroy();
-        IME.destroy();
+//        IME.destroy();
         Display.destroy();
         System.exit(0);
     }
@@ -201,7 +201,6 @@ public abstract class GlDisplayApp extends GlApp
         // create the input devices
         try {
             Keyboard.create();
-            DisplayCanvas.patchLwjglKeyboard();
         } catch (LWJGLException e) {
             log.warning("Failed to create keyboard.", e);
         }
@@ -215,11 +214,11 @@ public abstract class GlDisplayApp extends GlApp
         } catch (LWJGLException e) {
             log.warning("Failed to create controllers.", e);
         }
-        try {
-            IME.create();
-        } catch (LWJGLException e) {
-            log.warning("Failed to create ime.", e);
-        }
+//        try {
+//            IME.create();
+//        } catch (LWJGLException e) {
+//            log.warning("Failed to create ime.", e);
+//        }
 
         // start the updater
         final Runnable updater = new Runnable() {
@@ -248,8 +247,28 @@ public abstract class GlDisplayApp extends GlApp
     @Override
     protected void initRenderer ()
     {
-        DisplayMode mode = Display.getDisplayMode();
-        _renderer.init(Display.getDrawable(), mode.getWidth(), mode.getHeight());
+        Dimension dim = calcRendererSize();
+        _renderer.init(Display.getDrawable(), dim.width, dim.height);
+    }
+
+    /**
+     * Update the renderer size after a mode change.
+     */
+    protected void updateRendererSize ()
+    {
+        if (Display.isCreated()) {
+            Dimension dim = calcRendererSize();
+            _renderer.setSize(dim.width, dim.height);
+        }
+    }
+
+    /**
+     * Return the size to use for rendering the specified display mode.
+     * Single place to perform overrides of rendering alterations.
+     */
+    protected Dimension calcRendererSize ()
+    {
+        return new Dimension(Display.getWidth(), Display.getHeight());
     }
 
     /**

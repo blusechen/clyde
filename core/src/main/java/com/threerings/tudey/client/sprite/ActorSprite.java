@@ -914,7 +914,55 @@ public class ActorSprite extends Sprite
     /**
      * Changes model configurations on the corresponding entry sprite.
      */
-    public static class StatefulModelEntry extends Original
+    public static class StatefulModel extends Original
+    {
+        /**
+         * Creates a new implementation.
+         */
+        public StatefulModel(
+            TudeyContext ctx, Scope parentScope, ActorSpriteConfig.StatefulModel config)
+        {
+            super(ctx, parentScope);
+            setConfig(config);
+        }
+
+        @Override
+        public void update (Actor actor)
+        {
+            super.update(actor);
+
+            ActorSpriteConfig.StatefulModel config = (ActorSpriteConfig.StatefulModel)_config;
+
+            // update the state animation
+            EntryState estate = (EntryState)actor;
+            int entered = estate.getStateEntered();
+            if (entered > _lastStateEntered) {
+                int state = estate.getState();
+                ConfigReference<ModelConfig> model = (state < config.states.length) ?
+                    config.states[state].model : null;
+                if (model != null) {
+                    updateModel(model);
+                }
+                _lastStateEntered = entered;
+            }
+        }
+
+        /**
+         * Update the displayed model.
+         */
+        protected void updateModel (ConfigReference<ModelConfig> model)
+        {
+            _model.setConfig(model);
+        }
+
+        /** The time at which we entered the last state. */
+        protected int _lastStateEntered;
+    }
+
+    /**
+     * Changes model configurations on the corresponding entry sprite.
+     */
+    public static class StatefulModelEntry extends StatefulModel
     {
         /**
          * Creates a new implementation.
@@ -922,8 +970,7 @@ public class ActorSprite extends Sprite
         public StatefulModelEntry (
             TudeyContext ctx, Scope parentScope, ActorSpriteConfig.StatefulModelEntry config)
         {
-            super(ctx, parentScope);
-            setConfig(config);
+            super(ctx, parentScope, config);
         }
 
         @Override
@@ -935,35 +982,26 @@ public class ActorSprite extends Sprite
             EntryState estate = (EntryState)((ActorSprite)_parentScope).getActor();
             EntrySprite esprite = _view.getEntrySprite(estate.getKey());
             _entryModel = (esprite == null) ? null : esprite.getModel();
+            if (_entryModel == null) {
+                // warning added RJG 2017-03-22
+                // This may need to be removed if there is something "normal" that has no entry
+                // model. But it seems like: if you're using this kind of sprite then you want
+                // the behavior that it enables and we shouldn't just silently fail to do that!
+                log.warning("Could not find originating 'Entry' sprite from a placeable," +
+                        " the StatefulModelEntry sprite for the actor cannot work without it.");
+            }
         }
 
         @Override
-        public void update (Actor actor)
+        protected void updateModel (ConfigReference<ModelConfig> model)
         {
-            super.update(actor);
-
-            ActorSpriteConfig.StatefulModelEntry config =
-                (ActorSpriteConfig.StatefulModelEntry)_config;
-
-            // update the state animation
-            EntryState estate = (EntryState)actor;
-            int entered = estate.getStateEntered();
-            if (entered > _lastStateEntered) {
-                int state = estate.getState();
-                ConfigReference<ModelConfig> model = (state < config.states.length) ?
-                    config.states[state].model : null;
-                if (model != null && _entryModel != null) {
-                    _entryModel.setConfig(model);
-                }
-                _lastStateEntered = entered;
+            if (_entryModel != null) {
+                _entryModel.setConfig(model);
             }
         }
 
         /** The model corresponding to the entry sprite. */
         protected Model _entryModel;
-
-        /** The time at which we entered the last state. */
-        protected int _lastStateEntered;
     }
 
     /**

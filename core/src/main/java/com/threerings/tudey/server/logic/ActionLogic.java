@@ -666,6 +666,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             _action.removed();
             if (_elseAction != null) {
                 _elseAction.removed();
@@ -734,6 +735,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             for (ActionLogic action : _actions) {
                 action.removed();
             }
@@ -805,6 +807,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             for (ActionLogic action : _actions) {
                 action.removed();
             }
@@ -882,6 +885,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             for (ActionLogic action : _actions) {
                 action.removed();
             }
@@ -933,6 +937,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             for (ActionLogic action : _actions) {
                 action.removed();
             }
@@ -953,6 +958,11 @@ public abstract class ActionLogic extends Logic
         @Override
         public boolean execute (int timestamp, Logic activator)
         {
+            if (_intervals == null) {
+                // we've already been removed
+                log.warning("Delayed action executed after being removed.");
+                return false;
+            }
             if (!_scenemgr.isRunning()) {
                 log.warning("Delayed action executing on shutdown SceneManager.", new Exception());
                 return false;
@@ -988,6 +998,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             _action.removed();
             for (ActionInterval ai : _intervals) {
                 ai.cancel();
@@ -1175,6 +1186,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             _action.removed();
         }
 
@@ -1247,6 +1259,7 @@ public abstract class ActionLogic extends Logic
         @Override
         protected void wasRemoved ()
         {
+            super.wasRemoved();
             if (_action != null) {
                 _action.removed();
             }

@@ -25,11 +25,16 @@
 
 package com.threerings.tudey.config;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import com.threerings.io.Streamable;
 
 import com.threerings.config.ConfigManager;
 import com.threerings.editor.Editable;
 import com.threerings.editor.EditorTypes;
+import com.threerings.editor.Groupable;
 import com.threerings.editor.Strippable;
 import com.threerings.export.Exportable;
 import com.threerings.util.DeepObject;
@@ -250,50 +255,78 @@ public abstract class ConditionConfig extends DeepObject
     }
 
     /**
-     * Satisfied if all of the component conditions are satisfied.
+     * A ConditionConfig containing other ConditionConfigs.
      */
-    public static class All extends ConditionConfig
+    protected static abstract class SubConditionConfig extends ConditionConfig
+        implements Groupable<ConditionConfig>
     {
-        /** The component conditions. */
-        @Editable
-        public ConditionConfig[] conditions = new ConditionConfig[0];
-
-        @Override
-        public String getLogicClassName ()
+        // from Groupable
+        public List<ConditionConfig> getGrouped ()
         {
-            return "com.threerings.tudey.server.logic.ConditionLogic$All";
+            return getSubConditions();
         }
 
         @Override
         public void invalidate ()
         {
-            for (ConditionConfig condition : conditions) {
+            for (ConditionConfig condition : getSubConditions()) {
                 condition.invalidate();
             }
+        }
+
+        /**
+         * Get the sub conditions.
+         */
+        protected abstract List<ConditionConfig> getSubConditions ();
+    }
+
+    /**
+     * The base class of both Any and All.
+     */
+    protected static abstract class MultiSubConditionConfig extends SubConditionConfig
+    {
+        /** The component conditions. */
+        @Editable
+        public ConditionConfig[] conditions = new ConditionConfig[0];
+
+        // from Groupable
+        public void setGrouped (List<ConditionConfig> values)
+        {
+            int nn = values.size();
+            conditions = new ConditionConfig[nn];
+            for (int ii = 0; ii < nn; ii++) {
+                conditions[ii] = values.get(ii);
+            }
+        }
+
+        @Override
+        protected List<ConditionConfig> getSubConditions ()
+        {
+            return Arrays.asList(conditions);
+        }
+    }
+
+    /**
+     * Satisfied if all of the component conditions are satisfied.
+     */
+    public static class All extends MultiSubConditionConfig
+    {
+        @Override
+        public String getLogicClassName ()
+        {
+            return "com.threerings.tudey.server.logic.ConditionLogic$All";
         }
     }
 
     /**
      * Satisfied if any of the component conditions are satisfied.
      */
-    public static class Any extends ConditionConfig
+    public static class Any extends MultiSubConditionConfig
     {
-        /** The component conditions. */
-        @Editable
-        public ConditionConfig[] conditions = new ConditionConfig[0];
-
         @Override
         public String getLogicClassName ()
         {
             return "com.threerings.tudey.server.logic.ConditionLogic$Any";
-        }
-
-        @Override
-        public void invalidate ()
-        {
-            for (ConditionConfig condition : conditions) {
-                condition.invalidate();
-            }
         }
     }
 
@@ -346,7 +379,7 @@ public abstract class ConditionConfig extends DeepObject
     /**
      * Satisfied if the component condition is not satisfied.
      */
-    public static class Not extends ConditionConfig
+    public static class Not extends SubConditionConfig
     {
         /** The component condition. */
         @Editable
@@ -358,10 +391,20 @@ public abstract class ConditionConfig extends DeepObject
             return "com.threerings.tudey.server.logic.ConditionLogic$Not";
         }
 
-        @Override
-        public void invalidate ()
+        // from Groupable
+        public void setGrouped (List<ConditionConfig> values)
         {
-            condition.invalidate();
+            if (values.size() == 1) {
+                condition = values.get(0);
+            } else {
+                throw new UnsupportedOperationException();
+            }
+        }
+
+        @Override
+        protected List<ConditionConfig> getSubConditions ()
+        {
+            return Collections.singletonList(condition);
         }
     }
 

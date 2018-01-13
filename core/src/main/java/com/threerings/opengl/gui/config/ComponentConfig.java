@@ -25,6 +25,11 @@
 
 package com.threerings.opengl.gui.config;
 
+import java.util.Arrays;
+import java.util.Collections;
+
+import com.google.common.base.Function;
+
 import com.google.common.collect.Lists;
 
 import com.samskivert.text.MessageUtil;
@@ -34,6 +39,7 @@ import com.samskivert.util.StringUtil;
 import com.threerings.config.ConfigReference;
 import com.threerings.editor.Editable;
 import com.threerings.editor.EditorTypes;
+import com.threerings.editor.Groupable;
 import com.threerings.export.Exportable;
 import com.threerings.expr.DynamicScope;
 import com.threerings.expr.Scope;
@@ -55,6 +61,8 @@ import com.threerings.opengl.model.Model;
 import com.threerings.opengl.model.config.ModelConfig;
 import com.threerings.opengl.renderer.Color4f;
 import com.threerings.opengl.util.GlContext;
+
+import static com.threerings.opengl.gui.Log.log;
 
 /**
  * Contains a component configuration.
@@ -100,6 +108,29 @@ public abstract class ComponentConfig extends DeepObject
 
         /** The corresponding UI constant. */
         protected final int _constant;
+    }
+
+    /**
+     * Base class for configuring sub-layout.
+     */
+    public static abstract class ChildComponent extends DeepObject
+        implements Exportable
+    {
+        /** The child component. */
+        @Editable(weight=1)
+        public ComponentConfig component = new ComponentConfig.Spacer();
+
+        /**
+         * Get a function for extracting components.
+         */
+        public static Function<ChildComponent, ComponentConfig> extractFunction ()
+        {
+            return new Function<ChildComponent, ComponentConfig>() {
+                public ComponentConfig apply (ChildComponent ccomp) {
+                    return ccomp.component;
+                }
+            };
+        }
     }
 
     /**
@@ -557,12 +588,12 @@ public abstract class ComponentConfig extends DeepObject
      * A tabbed pane.
      */
     public static class TabbedPane extends ComponentConfig
+        implements Groupable<ComponentConfig>
     {
         /**
          * A single tab.
          */
-        public static class Tab extends DeepObject
-            implements Exportable
+        public static class Tab extends ChildComponent
         {
             /** The tab title. */
             @Editable(hgroup="t")
@@ -575,10 +606,6 @@ public abstract class ComponentConfig extends DeepObject
             /** An optional override style for the tab button. */
             @Editable(nullable=true)
             public ConfigReference<StyleConfig> styleOverride;
-
-            /** The tab component. */
-            @Editable
-            public ComponentConfig component = new ComponentConfig.Spacer();
         }
 
         /** The tab alignment. */
@@ -606,6 +633,22 @@ public abstract class ComponentConfig extends DeepObject
         {
             for (Tab tab : tabs) {
                 tab.component.invalidate();
+            }
+        }
+
+        // from Groupable
+        public java.util.List<ComponentConfig> getGrouped ()
+        {
+            return Lists.transform(Arrays.asList(tabs), ChildComponent.extractFunction());
+        }
+
+        // from Groupable
+        public void setGrouped (java.util.List<ComponentConfig> values)
+        {
+            int nn = values.size();
+            this.tabs = new Tab[nn];
+            for (int ii = 0; ii < nn; ii++) {
+                (this.tabs[ii] = new Tab()).component = values.get(ii);
             }
         }
 
@@ -717,6 +760,7 @@ public abstract class ComponentConfig extends DeepObject
      * A scroll pane.
      */
     public static class ScrollPane extends ComponentConfig
+        implements Groupable<ComponentConfig>
     {
         /** Whether or not to allow vertical scrolling. */
         @Editable(hgroup="v")
@@ -750,6 +794,22 @@ public abstract class ComponentConfig extends DeepObject
         public void invalidate ()
         {
             child.invalidate();
+        }
+
+        // from Groupable
+        public java.util.List<ComponentConfig> getGrouped ()
+        {
+            return Collections.singletonList(child);
+        }
+
+        // from Groupable
+        public void setGrouped (java.util.List<ComponentConfig> values)
+        {
+            if (values.size() == 1) {
+                child = values.get(0);
+            } else {
+                throw new UnsupportedOperationException();
+            }
         }
 
         @Override
@@ -807,6 +867,7 @@ public abstract class ComponentConfig extends DeepObject
      * A container.
      */
     public static class Container extends ComponentConfig
+        implements Groupable<ComponentConfig>
     {
         /** The layout of the container. */
         @Editable
@@ -816,6 +877,24 @@ public abstract class ComponentConfig extends DeepObject
         public void invalidate ()
         {
             layout.invalidate();
+        }
+
+        // from Groupable
+        public java.util.List<ComponentConfig> getGrouped ()
+        {
+            return Lists.transform(layout.getChildComponents(), ChildComponent.extractFunction());
+        }
+
+        // from Groupable
+        public void setGrouped (java.util.List<ComponentConfig> values)
+        {
+            int nn = values.size();
+            LayoutConfig.Group group = new LayoutConfig.HorizontalGroup();
+            group.children = new LayoutConfig.Group.Child[nn];
+            for (int ii = 0; ii < nn; ii++) {
+                (group.children[ii] = new LayoutConfig.Group.Child()).component = values.get(ii);
+            }
+            this.layout = group;
         }
 
         @Override
@@ -896,7 +975,7 @@ public abstract class ComponentConfig extends DeepObject
                 (com.threerings.opengl.gui.text.HTMLView)comp;
             view.setAntialiased(antialias);
             view.setStyleSheet(stylesheet);
-            view.setContents(contents);
+            view.setContents(getMessage(msgs, contents));
         }
     }
 

@@ -39,7 +39,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import com.google.common.annotations.Beta;
 import com.google.common.collect.Iterables;
 
-import org.lwjgl.input.IME;
+//import org.lwjgl.input.IME;
 import org.lwjgl.opengl.GL11;
 
 import com.samskivert.util.HashIntMap;
@@ -80,6 +80,7 @@ public abstract class Root extends SimpleOverlay
     {
         super(ctx);
         _soundGroup = ctx.getSoundManager().createGroup(ctx.getClipProvider(), SOUND_SOURCES);
+        ctx.getRenderer().addObserver(_rendererObserver);
     }
 
     /**
@@ -88,6 +89,7 @@ public abstract class Root extends SimpleOverlay
     public void dispose ()
     {
         _soundGroup.dispose();
+        _ctx.getRenderer().removeObserver(_rendererObserver);
     }
 
     /**
@@ -215,6 +217,8 @@ public abstract class Root extends SimpleOverlay
 
         // add this window to the hierarchy (which may set a new focus)
         window.setRoot(this);
+        Renderer renderer = _ctx.getRenderer();
+        window.layoutWindow(renderer.getWidth(), renderer.getHeight());
 
         // if no new focus was set when we added the window, give the focus to the previously
         // pending focus component
@@ -705,6 +709,16 @@ public abstract class Root extends SimpleOverlay
         _tipwin.validate();
     }
 
+    /**
+     * Callback from our Renderer.Observer.
+     */
+    protected void rendererSizeChanged (int ww, int hh)
+    {
+        for (Window window : _windows) {
+            window.layoutWindow(ww, hh);
+        }
+    }
+
     @Override
     protected void draw ()
     {
@@ -1004,26 +1018,26 @@ public abstract class Root extends SimpleOverlay
             _focus = focus;
             if (oldFocus != null) {
                 oldFocus.dispatchEvent(new FocusEvent(this, getTickStamp(), FocusEvent.FOCUS_LOST));
-                if (oldFocus instanceof IMEComponent) {
-                    setIMEFocus(false);
-                }
+//                if (oldFocus instanceof IMEComponent) {
+//                    setIMEFocus(false);
+//                }
             }
             if (_focus != null) {
                 _focus.dispatchEvent(new FocusEvent(this, getTickStamp(), FocusEvent.FOCUS_GAINED));
-                if (_focus instanceof IMEComponent) {
-                    setIMEFocus(true);
-                }
+//                if (_focus instanceof IMEComponent) {
+//                    setIMEFocus(true);
+//                }
             }
         }
     }
 
-    /**
-     * Called when the focus of an IME enabled component changes.
-     */
-    protected void setIMEFocus (boolean focused)
-    {
-        IME.setEnabled(focused);
-    }
+//    /**
+//     * Called when the focus of an IME enabled component changes.
+//     */
+//    protected void setIMEFocus (boolean focused)
+//    {
+//        IME.setEnabled(focused);
+//    }
 
     /**
      * Called by a window when its position changes. This triggers a recomputation of the hover
@@ -1302,6 +1316,13 @@ public abstract class Root extends SimpleOverlay
 
     /** When dragging, the visual representation of the dragged data. */
     protected Icon _dicon;
+
+    /** Our observer of renderer size. */
+    protected Renderer.Observer _rendererObserver = new Renderer.Observer() {
+        public void sizeChanged (int w, int h) {
+            rendererSizeChanged(w, h);
+        }
+    };
 
     protected static final float TIP_MODE_RESET = 0.6f;
 

@@ -123,7 +123,7 @@ public class AreaConfig extends ParameterizedConfig
 
         /** The area's event handlers. */
         @Editable
-        public HandlerConfig[] handlers = new HandlerConfig[0];
+        public HandlerConfig[] handlers = HandlerConfig.EMPTY_ARRAY;
 
         /**
          * Default constructor.
@@ -146,7 +146,7 @@ public class AreaConfig extends ParameterizedConfig
          */
         public String getLogicClassName ()
         {
-            return (tags.getLength() == 0 && handlers.length == 0 && !defaultEntrance) ? null :
+            return (getTags().getLength() == 0 && handlers.length == 0 && !defaultEntrance) ? null :
                 "com.threerings.tudey.server.logic.EntryLogic";
         }
 
@@ -158,6 +158,14 @@ public class AreaConfig extends ParameterizedConfig
             for (HandlerConfig handler : handlers) {
                 handler.getPreloads(cfgmgr, preloads);
             }
+        }
+
+        /**
+         * Get the tags, overrideable.
+         */
+        public TagConfig getTags ()
+        {
+            return tags;
         }
 
         @Override

@@ -27,12 +27,20 @@ package com.threerings.tudey.shape.config;
 
 import java.lang.ref.SoftReference;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+
 import org.lwjgl.opengl.GL11;
 
 import com.threerings.io.Streamable;
 
 import com.threerings.editor.Editable;
 import com.threerings.editor.EditorTypes;
+import com.threerings.editor.Groupable;
 import com.threerings.export.Exportable;
 import com.threerings.math.Box;
 import com.threerings.math.FloatMath;
@@ -53,10 +61,13 @@ import com.threerings.tudey.shape.Shape;
 @EditorTypes({
     ShapeConfig.Point.class, ShapeConfig.Segment.class, ShapeConfig.Rectangle.class,
     ShapeConfig.Circle.class, ShapeConfig.Capsule.class, ShapeConfig.Polygon.class,
-    ShapeConfig.Compound.class, ShapeConfig.Global.class  })
+    ShapeConfig.Transformed.class, ShapeConfig.Compound.class, ShapeConfig.Global.class  })
 public abstract class ShapeConfig extends DeepObject
     implements Exportable, Streamable
 {
+//    /** Shareable, empty array of ShapeConfigs. */
+//    public static final ShapeConfig[] EMPTY_ARRAY = new ShapeConfig[0];
+
     /**
      * A point.
      */
@@ -257,9 +268,72 @@ public abstract class ShapeConfig extends DeepObject
     }
 
     /**
+     * A transformed shape.
+     */
+    public static class Transformed extends ShapeConfig
+        implements Groupable<ShapeConfig>
+    {
+        /** The base shape. */
+        @Editable
+        public ShapeConfig shape = new Point();
+
+        /** The shape's transform. */
+        @Editable(step=0.01)
+        public Transform2D transform = new Transform2D();
+
+        @Override
+        public void invalidate ()
+        {
+            super.invalidate();
+            shape.invalidate();
+        }
+
+        // from Groupable
+        public List<ShapeConfig> getGrouped ()
+        {
+            return Collections.singletonList(shape);
+        }
+
+        // from Groupable
+        public void setGrouped (List<ShapeConfig> values)
+        {
+            if (values.size() == 1) {
+                shape = values.get(0);
+            } else {
+                throw new UnsupportedOperationException();
+            }
+        }
+
+        @Override
+        protected Shape createShape ()
+        {
+            return shape.getShape().transform(transform);
+        }
+
+        @Override
+        protected void draw (boolean outline)
+        {
+            transform.update(Transform2D.UNIFORM);
+            Vector2f translation = transform.getTranslation();
+            float rotation = transform.getRotation();
+            float scale = transform.getScale();
+            GL11.glPushMatrix();
+            try {
+                GL11.glTranslatef(translation.x, translation.y, 0f);
+                GL11.glRotatef(FloatMath.toDegrees(rotation), 0f, 0f, 1f);
+                GL11.glScalef(scale, scale, scale);
+                shape.draw(outline);
+            } finally {
+                GL11.glPopMatrix();
+            }
+        }
+    }
+
+    /**
      * A compound shape.
      */
     public static class Compound extends ShapeConfig
+        implements Groupable<ShapeConfig>
     {
         /** The component shapes. */
         @Editable
@@ -274,11 +348,36 @@ public abstract class ShapeConfig extends DeepObject
             }
         }
 
+        // from Groupable
+        public List<ShapeConfig> getGrouped ()
+        {
+            return Lists.transform(Arrays.asList(shapes),
+                    new Function<TransformedShape, ShapeConfig>() {
+                        public ShapeConfig apply (TransformedShape xform) {
+                            return xform.shape;
+                        }
+                    });
+        }
+
+        // from Groupable
+        public void setGrouped (List<ShapeConfig> values)
+        {
+            int nn = values.size();
+            shapes = new TransformedShape[nn];
+            for (int ii = 0; ii < nn; ii++) {
+                (shapes[ii] = new TransformedShape()).shape = values.get(ii);
+            }
+        }
+
         @Override
         protected Shape createShape ()
         {
-            Shape[] tshapes = new Shape[shapes.length];
-            for (int ii = 0; ii < shapes.length; ii++) {
+            final int nn = shapes.length;
+            if (nn == 1) {
+                return shapes[0].getShape();
+            }
+            Shape[] tshapes = new Shape[nn];
+            for (int ii = 0; ii < nn; ii++) {
                 tshapes[ii] = shapes[ii].getShape();
             }
             return new com.threerings.tudey.shape.Compound(tshapes);

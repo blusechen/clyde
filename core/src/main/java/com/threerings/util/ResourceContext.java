@@ -2,7 +2,7 @@
 // $Id$
 //
 // Clyde library - tools for developing networked games
-// Copyright (C) 2005-2012 Three Rings Design, Inc.
+// Copyright (C) 2005-2015 Three Rings Design, Inc.
 // http://code.google.com/p/clyde/
 //
 // Redistribution and use in source and binary forms, with or without modification, are permitted
@@ -23,56 +23,29 @@
 // LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package com.threerings.opengl.gui.event;
+package com.threerings.util;
 
-import org.lwjgl.input.IME.State;
+import com.threerings.config.ConfigManager;
+import com.threerings.resource.ResourceManager;
+import com.threerings.util.MessageManager;
 
 /**
- * Encapsulates the information associated with an IME event.
+ * Provides access to the services required by the editor.
  */
-public class IMEEvent extends Event
+public interface ResourceContext
 {
-    public IMEEvent (Object source, long when, State state, String str, int cursorPos)
-    {
-        super(source, when);
-        _str = str;
-        _cursorPos = cursorPos;
-        _state = state;
-    }
+    /**
+     * Returns a reference to the resource manager.
+     */
+    public ResourceManager getResourceManager ();
 
     /**
-     * Returns the result string.
+     * Returns a reference to the message manager.
      */
-    public String getString ()
-    {
-        return _str;
-    }
+    public MessageManager getMessageManager ();
 
     /**
-     * Returns the cursor position.
+     * Returns a reference to the configuration manager.
      */
-    public int getCursorPos ()
-    {
-        return _cursorPos;
-    }
-
-    /**
-     * Returns the event state.
-     */
-    public State getState ()
-    {
-        return _state;
-    }
-
-    /**
-     * Returns true if composition is in progress.
-     */
-    public boolean isResult ()
-    {
-        return _state == State.RESULT;
-    }
-
-    protected String _str;
-    protected int _cursorPos;
-    protected State _state;
+    public ConfigManager getConfigManager ();
 }

@@ -25,6 +25,10 @@
 
 package com.threerings.opengl.gui.config;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import com.threerings.editor.Editable;
 import com.threerings.editor.EditorTypes;
 import com.threerings.export.Exportable;
@@ -34,6 +38,7 @@ import com.threerings.util.MessageBundle;
 
 import com.threerings.opengl.gui.Component;
 import com.threerings.opengl.gui.Container;
+import com.threerings.opengl.gui.config.ComponentConfig.ChildComponent;
 import com.threerings.opengl.gui.layout.AbsoluteLayout;
 import com.threerings.opengl.gui.layout.AnchorLayout;
 import com.threerings.opengl.gui.layout.BorderLayout;
@@ -44,6 +49,8 @@ import com.threerings.opengl.gui.layout.VGroupLayout;
 import com.threerings.opengl.gui.util.Point;
 import com.threerings.opengl.gui.util.Rectangle;
 import com.threerings.opengl.util.GlContext;
+
+import static com.threerings.opengl.gui.Log.log;
 
 @EditorTypes({
     LayoutConfig.Absolute.class, LayoutConfig.Anchor.class,
@@ -224,16 +231,11 @@ public abstract class LayoutConfig extends DeepObject
          * Represents a child of the layout.
          */
         @EditorTypes({ Child.class, SizedChild.class })
-        public static class Child extends DeepObject
-            implements Exportable
+        public static class Child extends ChildComponent
         {
             /** The coordinates of the child. */
             @Editable(hgroup="c")
             public int x, y;
-
-            /** The child component. */
-            @Editable(weight=1)
-            public ComponentConfig component = new ComponentConfig.Spacer();
 
             /**
              * Creates the constraints object for this child.
@@ -269,11 +271,9 @@ public abstract class LayoutConfig extends DeepObject
         public Child[] children = new Child[0];
 
         @Override
-        public void invalidate ()
+        protected List<? extends ChildComponent> getChildComponents ()
         {
-            for (Child child : children) {
-                child.component.invalidate();
-            }
+            return Arrays.asList(children);
         }
 
         @Override
@@ -301,8 +301,7 @@ public abstract class LayoutConfig extends DeepObject
         /**
          * Represents a child of the layout.
          */
-        public static class Child extends DeepObject
-            implements Exportable
+        public static class Child extends ChildComponent
         {
             /** The proportional location of the anchor on the child. */
             @Editable(step=0.01, hgroup="c")
@@ -320,10 +319,6 @@ public abstract class LayoutConfig extends DeepObject
             @Editable
             public boolean fitToContainer;
 
-            /** The child component. */
-            @Editable
-            public ComponentConfig component = new ComponentConfig.Spacer();
-
             /**
              * Creates the constraints for this child.
              */
@@ -339,11 +334,9 @@ public abstract class LayoutConfig extends DeepObject
         public Child[] children = new Child[0];
 
         @Override
-        public void invalidate ()
+        protected List<? extends ChildComponent> getChildComponents ()
         {
-            for (Child child : children) {
-                child.component.invalidate();
-            }
+            return Arrays.asList(children);
         }
 
         @Override
@@ -371,16 +364,11 @@ public abstract class LayoutConfig extends DeepObject
         /**
          * Represents a child of the layout.
          */
-        public static class Child extends DeepObject
-            implements Exportable
+        public static class Child extends ChildComponent
         {
             /** The location of the child. */
             @Editable
             public Location location = Location.CENTER;
-
-            /** The child component. */
-            @Editable
-            public ComponentConfig component = new ComponentConfig.Spacer();
 
             /**
              * Returns the constraints for this child.
@@ -404,11 +392,9 @@ public abstract class LayoutConfig extends DeepObject
         public Child[] children = new Child[0];
 
         @Override
-        public void invalidate ()
+        protected List<? extends ChildComponent> getChildComponents ()
         {
-            for (Child child : children) {
-                child.component.invalidate();
-            }
+            return Arrays.asList(children);
         }
 
         @Override
@@ -436,8 +422,7 @@ public abstract class LayoutConfig extends DeepObject
         /**
          * Represents a child of the layout.
          */
-        public static class Child extends DeepObject
-            implements Exportable
+        public static class Child extends ChildComponent
         {
             /** Whether or not the component's size is fixed. */
             @Editable(hgroup="f")
@@ -446,10 +431,6 @@ public abstract class LayoutConfig extends DeepObject
             /** The weight of this child when redistributing space. */
             @Editable(min=0, hgroup="f")
             public int weight = 1;
-
-            /** The child component. */
-            @Editable
-            public ComponentConfig component = new ComponentConfig.Spacer();
 
             /**
              * Returns the constraints for this child.
@@ -485,11 +466,9 @@ public abstract class LayoutConfig extends DeepObject
         public Child[] children = new Child[0];
 
         @Override
-        public void invalidate ()
+        protected List<? extends ChildComponent> getChildComponents ()
         {
-            for (Child child : children) {
-                child.component.invalidate();
-            }
+            return Arrays.asList(children);
         }
 
         @Override
@@ -552,12 +531,9 @@ public abstract class LayoutConfig extends DeepObject
         /**
          * Represents a child of the layout.
          */
-        public static class Child extends DeepObject
-            implements Exportable
+        public static class Child extends ChildComponent
         {
-            /** The child component. */
-            @Editable
-            public ComponentConfig component = new ComponentConfig.Spacer();
+            // nothing more to add!
         }
 
         /** The number of columns in the table. */
@@ -589,11 +565,9 @@ public abstract class LayoutConfig extends DeepObject
         public Child[] children = new Child[0];
 
         @Override
-        public void invalidate ()
+        protected List<? extends ChildComponent> getChildComponents ()
         {
-            for (Child child : children) {
-                child.component.invalidate();
-            }
+            return Arrays.asList(children);
         }
 
         @Override
@@ -636,7 +610,20 @@ public abstract class LayoutConfig extends DeepObject
      */
     public void invalidate ()
     {
-        // nothing by default
+        for (ChildComponent ccomp : getChildComponents()) {
+            ccomp.component.invalidate();
+        }
+    }
+
+    /**
+     * Get the child components.
+     */
+    protected List<? extends ChildComponent> getChildComponents ()
+    {
+        // make a note that the specific subclass in use here hasn't overridden this method
+        log.info("LayoutConfig does not return child components: " + this.getClass());
+        // note: you may not need your invalidate() anymore once you implement this method
+        return Collections.emptyList();
     }
 
     /**
